@@ -18,6 +18,7 @@ interface MooringLine3DProps {
     keelPosition: THREE.Vector3;
   }>;
   onInspectPart?: (partId: string, worldPos: [number, number, number]) => void;
+  showTensionBadges?: boolean;
 }
 
 // In-place dynamic buffer vertex updater for Three.js TubeGeometry
@@ -120,6 +121,7 @@ export function MooringLine3D({
   onSelectMaterial,
   liveMotionRef,
   onInspectPart,
+  showTensionBadges = true,
 }: MooringLine3DProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -1781,235 +1783,238 @@ export function MooringLine3D({
         {/* ══════════════════════════════════════════════════════════════════
             3D REALTIME TENSION TELEMETRY BADGES & DYNAMIC PULL FORCE VECTORS
             ══════════════════════════════════════════════════════════════════ */}
-
-        {/* 1. Fairlead Tension Pull Force Vector Arrow */}
-        <group ref={fairleadVectorRef}>
-          <mesh position={[0, -0.38, 0]}>
-            <cylinderGeometry args={[0.012, 0.012, 0.70, 8]} />
-            <meshBasicMaterial
-              color={
-                buoyState.fairleadTension_kN > 60 ? '#ef4444' :
-                buoyState.fairleadTension_kN > 35 ? '#f59e0b' :
-                '#22d3ee'
-              }
-              transparent
-              opacity={0.85}
-            />
-          </mesh>
-          <mesh position={[0, -0.78, 0]} rotation={[Math.PI, 0, 0]}>
-            <coneGeometry args={[0.042, 0.14, 12]} />
-            <meshBasicMaterial
-              color={
-                buoyState.fairleadTension_kN > 60 ? '#ef4444' :
-                buoyState.fairleadTension_kN > 35 ? '#f59e0b' :
-                '#22d3ee'
-              }
-            />
-          </mesh>
-        </group>
-
-        {/* Floating Fairlead Tension Badge */}
-        <group ref={fairleadTensionRef}>
-          <Html center distanceFactor={14} zIndexRange={[500, 0]}>
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
-                if (liveMotionRef?.current) {
-                  const k = liveMotionRef.current.keelPosition;
-                  onInspectPart?.('upper_chain', [k.x, k.y, k.z]);
-                }
-                onSelectMaterial?.('upper_chain');
-              }}
-              style={{
-                cursor: 'pointer',
-                pointerEvents: 'auto',
-                userSelect: 'none',
-                background: 'rgba(2, 8, 23, 0.90)',
-                border: `1px solid ${
-                  buoyState.fairleadTension_kN > 60 ? '#ef4444' :
-                  buoyState.fairleadTension_kN > 35 ? '#f59e0b' :
-                  'rgba(34, 211, 238, 0.6)'
-                }`,
-                boxShadow: '0 4px 18px rgba(0, 0, 0, 0.85), 0 0 12px rgba(34, 211, 238, 0.25)',
-                borderRadius: '5px',
-                padding: '4px 8px',
-                whiteSpace: 'nowrap',
-                fontFamily: 'monospace',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'transform 0.15s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1.0)')}
-              title="Click to inspect Fairlead Upper Chain tension & load"
-            >
-              <div
-                style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background:
-                    buoyState.fairleadTension_kN > 60 ? '#ef4444' :
-                    buoyState.fairleadTension_kN > 35 ? '#f59e0b' :
-                    '#22d3ee',
-                  boxShadow: `0 0 8px ${
+        {showTensionBadges && (
+          <>
+            {/* 1. Fairlead Tension Pull Force Vector Arrow */}
+            <group ref={fairleadVectorRef}>
+              <mesh position={[0, -0.38, 0]}>
+                <cylinderGeometry args={[0.012, 0.012, 0.70, 8]} />
+                <meshBasicMaterial
+                  color={
                     buoyState.fairleadTension_kN > 60 ? '#ef4444' :
                     buoyState.fairleadTension_kN > 35 ? '#f59e0b' :
                     '#22d3ee'
-                  }`,
-                }}
-              />
-              <div>
-                <div style={{ fontSize: '7px', color: '#94a3b8', lineHeight: 1 }}>
-                  FAIRLEAD TENSION
-                </div>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: '#ffffff', lineHeight: 1.1 }}>
-                  {buoyState.fairleadTension_kN}{' '}
-                  <span style={{ fontSize: '7.5px', color: '#38bdf8' }}>kN</span>
-                </div>
-              </div>
-            </div>
-          </Html>
-        </group>
+                  }
+                  transparent
+                  opacity={0.85}
+                />
+              </mesh>
+              <mesh position={[0, -0.78, 0]} rotation={[Math.PI, 0, 0]}>
+                <coneGeometry args={[0.042, 0.14, 12]} />
+                <meshBasicMaterial
+                  color={
+                    buoyState.fairleadTension_kN > 60 ? '#ef4444' :
+                    buoyState.fairleadTension_kN > 35 ? '#f59e0b' :
+                    '#22d3ee'
+                  }
+                />
+              </mesh>
+            </group>
 
-        {/* 2. Floating Mid-span S-Loop Tension Badge */}
-        <group ref={midspanTensionRef}>
-          <Html center distanceFactor={14} zIndexRange={[500, 0]}>
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
-                if (trawlFloatRef.current) {
-                  const p = trawlFloatRef.current.position;
-                  onInspectPart?.('nylon_rope', [p.x, p.y, p.z]);
-                }
-                onSelectMaterial?.('nylon_rope');
-              }}
-              style={{
-                cursor: 'pointer',
-                pointerEvents: 'auto',
-                userSelect: 'none',
-                background: 'rgba(2, 8, 23, 0.90)',
-                border: '1px solid rgba(56, 189, 248, 0.55)',
-                boxShadow: '0 4px 18px rgba(0, 0, 0, 0.85), 0 0 12px rgba(56, 189, 248, 0.25)',
-                borderRadius: '5px',
-                padding: '4px 8px',
-                whiteSpace: 'nowrap',
-                fontFamily: 'monospace',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'transform 0.15s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1.0)')}
-              title="Click to inspect Compliant Nylon S-Loop tension & load"
-            >
-              <div
-                style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: '#38bdf8',
-                  boxShadow: '0 0 8px #38bdf8',
-                }}
-              />
-              <div>
-                <div style={{ fontSize: '7px', color: '#94a3b8', lineHeight: 1 }}>
-                  S-LOOP TENSION
+            {/* Floating Fairlead Tension Badge */}
+            <group ref={fairleadTensionRef}>
+              <Html center distanceFactor={14} zIndexRange={[500, 0]}>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (liveMotionRef?.current) {
+                      const k = liveMotionRef.current.keelPosition;
+                      onInspectPart?.('upper_chain', [k.x, k.y, k.z]);
+                    }
+                    onSelectMaterial?.('upper_chain');
+                  }}
+                  style={{
+                    cursor: 'pointer',
+                    pointerEvents: 'auto',
+                    userSelect: 'none',
+                    background: 'rgba(2, 8, 23, 0.90)',
+                    border: `1px solid ${
+                      buoyState.fairleadTension_kN > 60 ? '#ef4444' :
+                      buoyState.fairleadTension_kN > 35 ? '#f59e0b' :
+                      'rgba(34, 211, 238, 0.6)'
+                    }`,
+                    boxShadow: '0 4px 18px rgba(0, 0, 0, 0.85), 0 0 12px rgba(34, 211, 238, 0.25)',
+                    borderRadius: '5px',
+                    padding: '4px 8px',
+                    whiteSpace: 'nowrap',
+                    fontFamily: 'monospace',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'transform 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1.0)')}
+                  title="Click to inspect Fairlead Upper Chain tension & load"
+                >
+                  <div
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background:
+                        buoyState.fairleadTension_kN > 60 ? '#ef4444' :
+                        buoyState.fairleadTension_kN > 35 ? '#f59e0b' :
+                        '#22d3ee',
+                      boxShadow: `0 0 8px ${
+                        buoyState.fairleadTension_kN > 60 ? '#ef4444' :
+                        buoyState.fairleadTension_kN > 35 ? '#f59e0b' :
+                        '#22d3ee'
+                      }`,
+                    }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '7px', color: '#94a3b8', lineHeight: 1 }}>
+                      FAIRLEAD TENSION
+                    </div>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#ffffff', lineHeight: 1.1 }}>
+                      {buoyState.fairleadTension_kN}{' '}
+                      <span style={{ fontSize: '7.5px', color: '#38bdf8' }}>kN</span>
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: '#ffffff', lineHeight: 1.1 }}>
-                  {Math.round((buoyState.fairleadTension_kN * 0.76 + buoyState.anchorTension_kN * 0.24) * 10) / 10}{' '}
-                  <span style={{ fontSize: '7.5px', color: '#38bdf8' }}>kN</span>
+              </Html>
+            </group>
+
+            {/* 2. Floating Mid-span S-Loop Tension Badge */}
+            <group ref={midspanTensionRef}>
+              <Html center distanceFactor={14} zIndexRange={[500, 0]}>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (trawlFloatRef.current) {
+                      const p = trawlFloatRef.current.position;
+                      onInspectPart?.('nylon_rope', [p.x, p.y, p.z]);
+                    }
+                    onSelectMaterial?.('nylon_rope');
+                  }}
+                  style={{
+                    cursor: 'pointer',
+                    pointerEvents: 'auto',
+                    userSelect: 'none',
+                    background: 'rgba(2, 8, 23, 0.90)',
+                    border: '1px solid rgba(56, 189, 248, 0.55)',
+                    boxShadow: '0 4px 18px rgba(0, 0, 0, 0.85), 0 0 12px rgba(56, 189, 248, 0.25)',
+                    borderRadius: '5px',
+                    padding: '4px 8px',
+                    whiteSpace: 'nowrap',
+                    fontFamily: 'monospace',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'transform 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1.0)')}
+                  title="Click to inspect Compliant Nylon S-Loop tension & load"
+                >
+                  <div
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background: '#38bdf8',
+                      boxShadow: '0 0 8px #38bdf8',
+                    }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '7px', color: '#94a3b8', lineHeight: 1 }}>
+                      S-LOOP TENSION
+                    </div>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#ffffff', lineHeight: 1.1 }}>
+                      {Math.round((buoyState.fairleadTension_kN * 0.76 + buoyState.anchorTension_kN * 0.24) * 10) / 10}{' '}
+                      <span style={{ fontSize: '7.5px', color: '#38bdf8' }}>kN</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </Html>
-        </group>
+              </Html>
+            </group>
 
-        {/* 3. Seabed Anchor Uplift Force Vector Arrow */}
-        <group ref={anchorVectorRef}>
-          <mesh position={[0, 0.35, 0]}>
-            <cylinderGeometry args={[0.012, 0.012, 0.65, 8]} />
-            <meshBasicMaterial
-              color={
-                buoyState.anchorTension_kN > 40 ? '#ef4444' :
-                buoyState.anchorTension_kN > 22 ? '#f59e0b' :
-                '#34d399'
-              }
-              transparent
-              opacity={0.85}
-            />
-          </mesh>
-          <mesh position={[0, 0.72, 0]}>
-            <coneGeometry args={[0.042, 0.14, 12]} />
-            <meshBasicMaterial
-              color={
-                buoyState.anchorTension_kN > 40 ? '#ef4444' :
-                buoyState.anchorTension_kN > 22 ? '#f59e0b' :
-                '#34d399'
-              }
-            />
-          </mesh>
-        </group>
-
-        {/* Floating Seabed Anchor Tension Badge */}
-        <group ref={anchorTensionRef}>
-          <Html center distanceFactor={14} zIndexRange={[500, 0]}>
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
-                onInspectPart?.('ground_chain', [0, -17.115, 0]);
-                onSelectMaterial?.('ground_chain');
-              }}
-              style={{
-                cursor: 'pointer',
-                pointerEvents: 'auto',
-                userSelect: 'none',
-                background: 'rgba(2, 8, 23, 0.90)',
-                border: '1px solid rgba(52, 211, 153, 0.55)',
-                boxShadow: '0 4px 18px rgba(0, 0, 0, 0.85), 0 0 12px rgba(52, 211, 153, 0.25)',
-                borderRadius: '5px',
-                padding: '4px 8px',
-                whiteSpace: 'nowrap',
-                fontFamily: 'monospace',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'transform 0.15s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1.0)')}
-              title="Click to inspect Seabed Ground Chain & Sinker holding tension"
-            >
-              <div
-                style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background:
-                    buoyState.anchorTension_kN > 40 ? '#ef4444' :
-                    buoyState.anchorTension_kN > 22 ? '#f59e0b' :
-                    '#34d399',
-                  boxShadow: `0 0 8px ${
+            {/* 3. Seabed Anchor Uplift Force Vector Arrow */}
+            <group ref={anchorVectorRef}>
+              <mesh position={[0, 0.35, 0]}>
+                <cylinderGeometry args={[0.012, 0.012, 0.65, 8]} />
+                <meshBasicMaterial
+                  color={
                     buoyState.anchorTension_kN > 40 ? '#ef4444' :
                     buoyState.anchorTension_kN > 22 ? '#f59e0b' :
                     '#34d399'
-                  }`,
-                }}
-              />
-              <div>
-                <div style={{ fontSize: '7px', color: '#94a3b8', lineHeight: 1 }}>
-                  ANCHOR HOLDING PULL
+                  }
+                  transparent
+                  opacity={0.85}
+                />
+              </mesh>
+              <mesh position={[0, 0.72, 0]}>
+                <coneGeometry args={[0.042, 0.14, 12]} />
+                <meshBasicMaterial
+                  color={
+                    buoyState.anchorTension_kN > 40 ? '#ef4444' :
+                    buoyState.anchorTension_kN > 22 ? '#f59e0b' :
+                    '#34d399'
+                  }
+                />
+              </mesh>
+            </group>
+
+            {/* Floating Seabed Anchor Tension Badge */}
+            <group ref={anchorTensionRef}>
+              <Html center distanceFactor={14} zIndexRange={[500, 0]}>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onInspectPart?.('ground_chain', [0, -17.115, 0]);
+                    onSelectMaterial?.('ground_chain');
+                  }}
+                  style={{
+                    cursor: 'pointer',
+                    pointerEvents: 'auto',
+                    userSelect: 'none',
+                    background: 'rgba(2, 8, 23, 0.90)',
+                    border: '1px solid rgba(52, 211, 153, 0.55)',
+                    boxShadow: '0 4px 18px rgba(0, 0, 0, 0.85), 0 0 12px rgba(52, 211, 153, 0.25)',
+                    borderRadius: '5px',
+                    padding: '4px 8px',
+                    whiteSpace: 'nowrap',
+                    fontFamily: 'monospace',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'transform 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1.0)')}
+                  title="Click to inspect Seabed Ground Chain & Sinker holding tension"
+                >
+                  <div
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background:
+                        buoyState.anchorTension_kN > 40 ? '#ef4444' :
+                        buoyState.anchorTension_kN > 22 ? '#f59e0b' :
+                        '#34d399',
+                      boxShadow: `0 0 8px ${
+                        buoyState.anchorTension_kN > 40 ? '#ef4444' :
+                        buoyState.anchorTension_kN > 22 ? '#f59e0b' :
+                        '#34d399'
+                      }`,
+                    }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '7px', color: '#94a3b8', lineHeight: 1 }}>
+                      ANCHOR HOLDING PULL
+                    </div>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#ffffff', lineHeight: 1.1 }}>
+                      {buoyState.anchorTension_kN}{' '}
+                      <span style={{ fontSize: '7.5px', color: '#34d399' }}>kN</span>
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: '#ffffff', lineHeight: 1.1 }}>
-                  {buoyState.anchorTension_kN}{' '}
-                  <span style={{ fontSize: '7.5px', color: '#34d399' }}>kN</span>
-                </div>
-              </div>
-            </div>
-          </Html>
-        </group>
+              </Html>
+            </group>
+          </>
+        )}
       </group>
     </group>
   );

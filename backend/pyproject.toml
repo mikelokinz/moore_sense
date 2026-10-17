@@ -1,0 +1,7 @@
+[tool.pyrefly]
+search-path = ["."]
+disable-search-path-heuristics = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

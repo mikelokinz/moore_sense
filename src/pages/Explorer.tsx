@@ -25,6 +25,7 @@ import { OfflineBuoysModal } from '../components/ui/OfflineBuoysModal';
 import { PillMenuPopover } from '../components/ui/PillMenuPopover';
 import { SolarTimeHUD } from '../components/ui/SolarTimeHUD';
 import { calculateSolarEphemeris } from '../utils/solarCalculator';
+import { InitialLoadingScreen } from '../components/intro/InitialLoadingScreen';
 
 const WatchCircleLab = lazy(() => import('./WatchCircleLab'));
 
@@ -36,6 +37,8 @@ export default function Explorer({ initialStage = 'exploration' }: ExplorerProps
   // Camera stage state
   const [stage, setStage] = useState<CameraStage>(initialStage);
   const [isReadyToInteract, setIsReadyToInteract] = useState(false);
+  const [hasEntered, setHasEntered] = useState(false);
+  const [isIntroDismissed, setIsIntroDismissed] = useState(false);
 
   // Floating Pill & Modal States
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -342,13 +345,14 @@ export default function Explorer({ initialStage = 'exploration' }: ExplorerProps
                 buoys={buoys}
                 selectedBuoyId={selectedBuoyId}
                 onSelectBuoy={(b) => selectBuoy(b.id)}
-                visible={showBuoys}
+                visible={showBuoys && hasEntered}
               />
             </MoorSenseEarth>
 
             {/* Camera Controller */}
             <CameraController
               stage={stage}
+              hasStarted={hasEntered}
               onStageComplete={handleStageComplete}
               targetStation={memoizedTargetStation}
               isExploring={isExploring}
@@ -400,6 +404,9 @@ export default function Explorer({ initialStage = 'exploration' }: ExplorerProps
               justifyContent: 'space-between',
               zIndex: 35,
               pointerEvents: 'none',
+              opacity: hasEntered ? 1 : 0,
+              transform: hasEntered ? 'translateY(0)' : 'translateY(-16px)',
+              transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.35s, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.35s',
             }}
           >
             {/* Top Left: Application Name + Quote (NO background box) & Vertically Arranged Buoy Buttons */}
@@ -842,6 +849,14 @@ export default function Explorer({ initialStage = 'exploration' }: ExplorerProps
             </div>
           )}
         </>
+      )}
+
+      {/* ── Initial Loading Page (Stable Ocean in Circle + Buoy & Moore + Loading / Launch Hub) ── */}
+      {!isIntroDismissed && (
+        <InitialLoadingScreen
+          onEnter={() => setHasEntered(true)}
+          onDismissed={() => setIsIntroDismissed(true)}
+        />
       )}
     </div>
   );

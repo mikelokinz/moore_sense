@@ -21,6 +21,7 @@ interface WatchCircleOverlayProps {
   }>;
   predictedPos?: { x: number; z: number } | null;
   isPredictionMode?: boolean;
+  showBadges?: boolean;
 }
 
 // ── Shared Gerstner Wave Vertex Shader for Conforming Overlays ──────────────
@@ -282,6 +283,7 @@ export function WatchCircleOverlay({
   liveMotionRef,
   predictedPos = null,
   isPredictionMode = false,
+  showBadges = true,
 }: WatchCircleOverlayProps) {
   // Conversion: 1 3D scene unit = 30 meters
   const M_TO_3D = 1 / 30;
@@ -904,78 +906,82 @@ export function WatchCircleOverlay({
             </group>
           ))}
 
-          {/* 3D Floating Zone Limit Badges along the Northern Perimeter */}
-          <group position={[0, 0.35, -calmRadius3D]}>
-            <Html center distanceFactor={26} zIndexRange={[20, 0]} style={{ pointerEvents: 'none', userSelect: 'none' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  background: 'rgba(6, 78, 59, 0.90)',
-                  border: '1px solid #10b981',
-                  borderRadius: '12px',
-                  padding: '3px 10px',
-                  boxShadow: '0 0 12px rgba(16, 185, 129, 0.55)',
-                  whiteSpace: 'nowrap',
-                  backdropFilter: 'blur(8px)',
-                }}
-              >
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
-                <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 800, color: '#a7f3d0', letterSpacing: '0.08em' }}>
-                  CALM SEA EXCURSION (~{Math.round(calmRadiusMeters)}m)
-                </span>
-              </div>
-            </Html>
-          </group>
+          {/* 3D Floating Zone Limit Badges along the Northern Perimeter (Disabled in pure Watch Circle no-HUD mode) */}
+          {showBadges && (
+            <>
+              <group position={[0, 0.35, -calmRadius3D]}>
+                <Html center distanceFactor={26} zIndexRange={[20, 0]} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: 'rgba(6, 78, 59, 0.90)',
+                      border: '1px solid #10b981',
+                      borderRadius: '12px',
+                      padding: '3px 10px',
+                      boxShadow: '0 0 12px rgba(16, 185, 129, 0.55)',
+                      whiteSpace: 'nowrap',
+                      backdropFilter: 'blur(8px)',
+                    }}
+                  >
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
+                    <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 800, color: '#a7f3d0', letterSpacing: '0.08em' }}>
+                      CALM SEA EXCURSION (~{Math.round(calmRadiusMeters)}m)
+                    </span>
+                  </div>
+                </Html>
+              </group>
 
-          <group position={[0, 0.35, -innerRadius3D]}>
-            <Html center distanceFactor={26} zIndexRange={[20, 0]} style={{ pointerEvents: 'none', userSelect: 'none' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  background: 'rgba(120, 53, 15, 0.90)',
-                  border: '1px solid #fbbf24',
-                  borderRadius: '12px',
-                  padding: '3px 10px',
-                  boxShadow: '0 0 12px rgba(251, 191, 36, 0.55)',
-                  whiteSpace: 'nowrap',
-                  backdropFilter: 'blur(8px)',
-                }}
-              >
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fbbf24', boxShadow: '0 0 8px #fbbf24' }} />
-                <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 800, color: '#fde68a', letterSpacing: '0.08em' }}>
-                  WATCH CIRCLE LIMIT (~{Math.round(radiusMeters)}m)
-                </span>
-              </div>
-            </Html>
-          </group>
+              <group position={[0, 0.35, -innerRadius3D]}>
+                <Html center distanceFactor={26} zIndexRange={[20, 0]} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: 'rgba(120, 53, 15, 0.90)',
+                      border: '1px solid #fbbf24',
+                      borderRadius: '12px',
+                      padding: '3px 10px',
+                      boxShadow: '0 0 12px rgba(251, 191, 36, 0.55)',
+                      whiteSpace: 'nowrap',
+                      backdropFilter: 'blur(8px)',
+                    }}
+                  >
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fbbf24', boxShadow: '0 0 8px #fbbf24' }} />
+                    <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 800, color: '#fde68a', letterSpacing: '0.08em' }}>
+                      WATCH CIRCLE LIMIT (~{Math.round(radiusMeters)}m)
+                    </span>
+                  </div>
+                </Html>
+              </group>
 
-          <group position={[0, 0.35, -outerRadius3D]}>
-            <Html center distanceFactor={26} zIndexRange={[20, 0]} style={{ pointerEvents: 'none', userSelect: 'none' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  background: 'rgba(127, 29, 29, 0.90)',
-                  border: '1px solid #ef4444',
-                  borderRadius: '12px',
-                  padding: '3px 10px',
-                  boxShadow: '0 0 12px rgba(239, 68, 68, 0.55)',
-                  whiteSpace: 'nowrap',
-                  backdropFilter: 'blur(8px)',
-                }}
-              >
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 8px #ef4444' }} />
-                <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 800, color: '#fecaca', letterSpacing: '0.08em' }}>
-                  MAX BREACH HAZARD (~{Math.round(outerRadiusMeters)}m)
-                </span>
-              </div>
-            </Html>
-          </group>
+              <group position={[0, 0.35, -outerRadius3D]}>
+                <Html center distanceFactor={26} zIndexRange={[20, 0]} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: 'rgba(127, 29, 29, 0.90)',
+                      border: '1px solid #ef4444',
+                      borderRadius: '12px',
+                      padding: '3px 10px',
+                      boxShadow: '0 0 12px rgba(239, 68, 68, 0.55)',
+                      whiteSpace: 'nowrap',
+                      backdropFilter: 'blur(8px)',
+                    }}
+                  >
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 8px #ef4444' }} />
+                    <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 800, color: '#fecaca', letterSpacing: '0.08em' }}>
+                      MAX BREACH HAZARD (~{Math.round(outerRadiusMeters)}m)
+                    </span>
+                  </div>
+                </Html>
+              </group>
+            </>
+          )}
         </group>
       )}
 

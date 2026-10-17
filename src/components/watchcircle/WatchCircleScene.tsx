@@ -47,6 +47,10 @@ interface WatchCircleSceneProps {
   predictedPos?: { x: number; z: number } | null;
   isPredictionMode?: boolean;
   physicsEngine?: PhysicsEngineMode;
+  disableInspection?: boolean;
+  showBadges?: boolean;
+  cameraLocked?: boolean;
+  buoyPosition?: 'center' | 'left';
 }
 
 // ── Physical 3D Elevation Mapping for Each Exploration Depth Level ───────────
@@ -167,6 +171,8 @@ interface WatchCircleCameraManagerProps {
     keelPosition: THREE.Vector3;
   }>;
   config?: MooringConfig;
+  cameraLocked?: boolean;
+  buoyPosition?: 'center' | 'left';
 }
 
 function WatchCircleCameraManager({
@@ -178,6 +184,8 @@ function WatchCircleCameraManager({
   catenaryPoints,
   liveMotionRef,
   config,
+  cameraLocked = false,
+  buoyPosition = 'center',
 }: WatchCircleCameraManagerProps) {
   const { camera } = useThree();
   const targetEye = useRef(new THREE.Vector3(6, 3.5, 12));
@@ -208,12 +216,17 @@ function WatchCircleCameraManager({
     if (!orbitRef.current) return;
     const controls = orbitRef.current;
     const buoy3D = getBuoy3D();
+    const rx = 0.8445;
+    const rz = -0.5355;
+    const shift = buoyPosition === 'left' ? 3.5 : 0;
+    const shiftX = rx * shift;
+    const shiftZ = rz * shift;
 
-    targetLook.current.copy(buoy3D);
+    targetLook.current.set(buoy3D.x + shiftX, 0.35, buoy3D.z + shiftZ);
     targetEye.current.set(
-      buoy3D.x + DEPTH_EYE_OFFSETS[0].x,
+      buoy3D.x + DEPTH_EYE_OFFSETS[0].x + shiftX,
       buoy3D.y + DEPTH_EYE_OFFSETS[0].y,
-      buoy3D.z + DEPTH_EYE_OFFSETS[0].z
+      buoy3D.z + DEPTH_EYE_OFFSETS[0].z + shiftZ
     );
 
     camera.position.copy(targetEye.current);
@@ -221,7 +234,7 @@ function WatchCircleCameraManager({
     controls.update();
     hasInitialized.current = true;
     lastTrackedBuoy.current.copy(buoy3D);
-  }, [getBuoy3D, camera, orbitRef]);
+  }, [getBuoy3D, camera, orbitRef, buoyPosition]);
 
   // Depth change triggers smooth camera translation to the actual mooring line at that depth
   useEffect(() => {
@@ -325,15 +338,42 @@ function WatchCircleCameraManager({
     if (!orbitRef.current) return;
     const controls = orbitRef.current;
 
+    // Lock camera angle strictly when requested
+    if (cameraLocked) {
+      const buoy3D = getBuoy3D();
+      const rx = 0.8445;
+      const rz = -0.5355;
+      const shift = buoyPosition === 'left' ? 3.5 : 0;
+      const shiftX = rx * shift;
+      const shiftZ = rz * shift;
+
+      targetLook.current.set(buoy3D.x + shiftX, 0.35, buoy3D.z + shiftZ);
+      targetEye.current.set(
+        buoy3D.x + DEPTH_EYE_OFFSETS[0].x + shiftX,
+        0.35 + DEPTH_EYE_OFFSETS[0].y,
+        buoy3D.z + DEPTH_EYE_OFFSETS[0].z + shiftZ
+      );
+      camera.position.copy(targetEye.current);
+      controls.target.copy(targetLook.current);
+      controls.update();
+      return;
+    }
+
     // Safety initialization on first render frame
     if (!hasInitialized.current) {
       hasInitialized.current = true;
       const buoy3D = getBuoy3D();
-      targetLook.current.set(buoy3D.x, 0.35, buoy3D.z);
+      const rx = 0.8445;
+      const rz = -0.5355;
+      const shift = buoyPosition === 'left' ? 3.5 : 0;
+      const shiftX = rx * shift;
+      const shiftZ = rz * shift;
+
+      targetLook.current.set(buoy3D.x + shiftX, 0.35, buoy3D.z + shiftZ);
       targetEye.current.set(
-        buoy3D.x + DEPTH_EYE_OFFSETS[0].x,
+        buoy3D.x + DEPTH_EYE_OFFSETS[0].x + shiftX,
         0.35 + DEPTH_EYE_OFFSETS[0].y,
-        buoy3D.z + DEPTH_EYE_OFFSETS[0].z
+        buoy3D.z + DEPTH_EYE_OFFSETS[0].z + shiftZ
       );
       camera.position.copy(targetEye.current);
       controls.target.copy(targetLook.current);
@@ -381,6 +421,10 @@ export function WatchCircleScene({
   predictedPos,
   isPredictionMode = false,
   physicsEngine = 'rapier',
+  disableInspection = false,
+  showBadges = true,
+  cameraLocked = false,
+  buoyPosition = 'center',
 }: WatchCircleSceneProps) {
   const orbitRef = useRef<OrbitControlsImpl>(null!);
 
@@ -427,10 +471,13 @@ export function WatchCircleScene({
     );
   }, [env.waveHeight, env.currentSpeed, effectiveOceanDirection]);
 
+  const initialShiftX = buoyPosition === 'left' ? 0.8445 * 3.5 : 0;
+  const initialShiftZ = buoyPosition === 'left' ? -0.5355 * 3.5 : 0;
+
   return (
     <Canvas
       camera={{
-        position: [initialBuoyX + 5.2, 3.5, initialBuoyZ + 8.2],
+        position: [initialBuoyX + 5.2 + initialShiftX, 3.5, initialBuoyZ + 8.2 + initialShiftZ],
         fov: 42,
         near: 0.1,
         far: 3000,
@@ -495,6 +542,7 @@ export function WatchCircleScene({
             liveMotionRef={liveMotionRef}
             predictedPos={predictedPos}
             isPredictionMode={isPredictionMode}
+            showBadges={showBadges}
           />
 
           {/* ── 3D Mooring Buoy with Rapier WebAssembly Physics ── */}
@@ -508,7 +556,7 @@ export function WatchCircleScene({
             liveMotionRef={liveMotionRef}
             waveParams={waveParams}
             physicsEngine={physicsEngine}
-            onInspectPart={(partId, worldPos) => {
+            onInspectPart={disableInspection ? undefined : (partId, worldPos) => {
               setInspectedPart({ id: partId, worldPos });
             }}
           />
@@ -523,7 +571,8 @@ export function WatchCircleScene({
             selectedMaterialId={selectedMaterialId}
             onSelectMaterial={onSelectMaterial}
             liveMotionRef={liveMotionRef}
-            onInspectPart={(partId, worldPos) => {
+            showTensionBadges={showBadges}
+            onInspectPart={disableInspection ? undefined : (partId, worldPos) => {
               setInspectedPart({ id: partId, worldPos });
             }}
           />
@@ -532,7 +581,7 @@ export function WatchCircleScene({
           <SeabedEnvironment waterDepth={config.waterDepth} seabedY={-18} />
 
           {/* ── Interactive 3D Component Inspection Callout (Camera-correlated DOM HUD) ── */}
-          {inspectedPart && (
+          {!disableInspection && inspectedPart && (
             <MooringPartCallout
               partId={inspectedPart.id}
               position={inspectedPart.worldPos}
@@ -556,20 +605,27 @@ export function WatchCircleScene({
         catenaryPoints={catenaryPoints}
         liveMotionRef={liveMotionRef}
         config={config}
+        cameraLocked={cameraLocked}
+        buoyPosition={buoyPosition}
       />
 
       {/* ── OrbitControls for 360° Orbit, Pan, and Zoom at Any Depth ── */}
       <OrbitControls
         ref={orbitRef}
-        target={[initialBuoyX, 0.35, initialBuoyZ]}
-        enablePan={true}
-        enableZoom={true}
-        enableRotate={true}
+        target={[
+          initialBuoyX + initialShiftX,
+          0.35,
+          initialBuoyZ + initialShiftZ,
+        ]}
+        enablePan={!cameraLocked}
+        enableZoom={!cameraLocked}
+        enableRotate={!cameraLocked}
+        enabled={!cameraLocked}
         minDistance={2.5}
         maxDistance={350.0}
         maxPolarAngle={Math.PI / 2 + 0.4}
         dampingFactor={0.06}
-        enableDamping
+        enableDamping={!cameraLocked}
       />
     </Canvas>
   );

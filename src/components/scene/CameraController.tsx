@@ -21,6 +21,7 @@ const CAMERA_PRESETS: Record<CameraStage, { pos: THREE.Vector3; target: THREE.Ve
 
 interface CameraControllerProps {
   stage: CameraStage;
+  hasStarted?: boolean;
   onStageComplete?: (stage: CameraStage) => void;
   targetStation?: { latitude: number; longitude: number } | null;
   isExploring: boolean;
@@ -36,6 +37,7 @@ interface CameraControllerProps {
 
 export function CameraController({
   stage,
+  hasStarted = true,
   onStageComplete,
   targetStation,
   isExploring,
@@ -82,8 +84,37 @@ export function CameraController({
   }, [stage, camera]);
 
   // Snappy start rotation state (~0.9s brisk orbital spin into India view on initial load)
-  const isSnappyRotating = useRef(true);
+  const isSnappyRotating = useRef(false);
   const snappyProgress = useRef(0);
+  const hasTriggeredSnappy = useRef(false);
+  const loadingAngle = useRef(0);
+  const startSphRef = useRef(new THREE.Spherical());
+  const startOffsetRef = useRef(0);
+
+  // Position camera at initial orbital hold point before user enters
+  useEffect(() => {
+    if (!hasStarted && !hasTriggeredSnappy.current) {
+      const targetSph = new THREE.Spherical().setFromVector3(INDIA_POS);
+      const startRadius = 6.2;
+      const startTheta = targetSph.theta - 1.25;
+      const startPhi = targetSph.phi + 0.10;
+      const curSph = new THREE.Spherical(startRadius, startPhi, startTheta);
+      camera.position.setFromSpherical(curSph);
+      camera.lookAt(0, 0, 0);
+    }
+  }, [hasStarted, camera]);
+
+  // Once hasStarted becomes true (after pressing the launch button), trigger snappy start rotation
+  useEffect(() => {
+    if (hasStarted && !hasTriggeredSnappy.current) {
+      hasTriggeredSnappy.current = true;
+      isSnappyRotating.current = true;
+      snappyProgress.current = 0;
+      startSphRef.current.setFromVector3(camera.position);
+      const persCamera = camera as THREE.PerspectiveCamera;
+      startOffsetRef.current = persCamera.view?.offsetX ?? (window.innerWidth * 0.24);
+    }
+  }, [hasStarted, camera]);
 
   // ══ Auto-Rotation, Earth Hover & 5-Second Hold State ══
   const isEarthHovered = useRef(false);
@@ -284,23 +315,66 @@ export function CameraController({
   }, [stage]);
 
   useFrame((state, delta) => {
-    // A. Snappy Start Rotation: Pure constant-radius horizontal rotation into India on initial load
+    const persCamera = camera as THREE.PerspectiveCamera;
+
+    // 0. Loading Screen Mode (Before User Enters)
+    if (!hasStarted && !isSnappyRotating.current) {
+      // Offset camera horizontally so the Earth sits majestically on the left side of the screen
+      const sideOffset = state.size.width * 0.24;
+      if (persCamera.setViewOffset) {
+        persCamera.setViewOffset(state.size.width, state.size.height, sideOffset, 0, state.size.width, state.size.height);
+      }
+
+      // Gentle, serene ambient planetary rotation while loading
+      loadingAngle.current += delta * 0.08;
+      const targetSph = new THREE.Spherical().setFromVector3(INDIA_POS);
+      const curRadius = 6.2; // Perfectly framed full-globe view
+      const curPhi = targetSph.phi + 0.10;
+      const curTheta = (targetSph.theta - 1.25) + loadingAngle.current;
+
+      camera.position.setFromSpherical(new THREE.Spherical(curRadius, curPhi, curTheta));
+      camera.lookAt(0, 0, 0);
+
+      if (orbitControlsRef?.current) {
+        if (orbitControlsRef.current.enabled) orbitControlsRef.current.enabled = false;
+        if (orbitControlsRef.current.autoRotate) orbitControlsRef.current.autoRotate = false;
+      }
+      return;
+    }
+
+    // A. Smooth & Snappy Launch: Transition Globe from Side to Center, and swoop into India
     if (isSnappyRotating.current) {
       snappyProgress.current = Math.min(1.0, snappyProgress.current + delta * 1.15);
-      // Snappy cubic ease-out curve (brisk start, smooth cushioned landing)
-      const t = 1 - Math.pow(1 - snappyProgress.current, 3);
+      // Buttery smooth cubic-quartic ease-out curve (brisk start, cushioned deceleration)
+      const t = 1 - Math.pow(1 - snappyProgress.current, 3.5);
 
       const targetSph = new THREE.Spherical().setFromVector3(INDIA_POS);
-      // Exact constant radius (4.8) and elevation (phi) — pure rotation around the globe
-      const startTheta = targetSph.theta - 1.20;
+      const startRadius = startSphRef.current.radius || 6.2;
+      const startPhi = startSphRef.current.phi || (targetSph.phi + 0.10);
+      const startTheta = startSphRef.current.theta;
 
-      const curTheta = THREE.MathUtils.lerp(startTheta, targetSph.theta, t);
-      const curSph = new THREE.Spherical(targetSph.radius, targetSph.phi, curTheta);
+      // Shortest angular path towards target theta
+      let dTheta = targetSph.theta - startTheta;
+      while (dTheta > Math.PI) dTheta -= Math.PI * 2;
+      while (dTheta < -Math.PI) dTheta += Math.PI * 2;
+      const curTheta = startTheta + dTheta * t;
+
+      const curRadius = THREE.MathUtils.lerp(startRadius, targetSph.radius, t);
+      const curPhi = THREE.MathUtils.lerp(startPhi, targetSph.phi, t);
+      const curSph = new THREE.Spherical(curRadius, curPhi, curTheta);
 
       camera.position.setFromSpherical(curSph);
       camera.lookAt(0, 0, 0);
       currentTarget.current.set(0, 0, 0);
       orbitTarget.current.set(0, 0, 0);
+
+      // Smooth horizontal offset glide from side to center
+      const curOffset = THREE.MathUtils.lerp(startOffsetRef.current, 0, t);
+      if (curOffset > 1.0 && persCamera.setViewOffset) {
+        persCamera.setViewOffset(state.size.width, state.size.height, curOffset, 0, state.size.width, state.size.height);
+      } else if (persCamera.clearViewOffset) {
+        persCamera.clearViewOffset();
+      }
 
       if (orbitControlsRef?.current) {
         orbitControlsRef.current.target.set(0, 0, 0);
@@ -313,6 +387,9 @@ export function CameraController({
       }
 
       if (snappyProgress.current >= 1.0) {
+        if (persCamera.clearViewOffset) {
+          persCamera.clearViewOffset();
+        }
         isSnappyRotating.current = false;
         camera.position.copy(INDIA_POS);
         camera.lookAt(0, 0, 0);
