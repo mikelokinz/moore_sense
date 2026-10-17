@@ -457,28 +457,28 @@ export function OfflineBuoysModal({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '5px',
-                    background: 'rgba(255, 255, 255, 0.06)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    background: isLost ? 'rgba(244, 63, 94, 0.12)' : 'rgba(234, 179, 8, 0.12)',
+                    border: isLost ? '1px solid rgba(244, 63, 94, 0.35)' : '1px solid rgba(234, 179, 8, 0.35)',
                     borderRadius: '6px',
                     padding: '4px 10px',
-                    color: '#e2e8f0',
+                    color: isLost ? '#fca5a5' : '#fef08a',
                     fontSize: '9px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(34, 211, 238, 0.2)';
-                    e.currentTarget.style.borderColor = '#22d3ee';
+                    e.currentTarget.style.background = isLost ? 'rgba(244, 63, 94, 0.28)' : 'rgba(234, 179, 8, 0.28)';
+                    e.currentTarget.style.borderColor = isLost ? '#f43f5e' : '#eab308';
                     e.currentTarget.style.color = '#ffffff';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                    e.currentTarget.style.color = '#e2e8f0';
+                    e.currentTarget.style.background = isLost ? 'rgba(244, 63, 94, 0.12)' : 'rgba(234, 179, 8, 0.12)';
+                    e.currentTarget.style.borderColor = isLost ? 'rgba(244, 63, 94, 0.35)' : 'rgba(234, 179, 8, 0.35)';
+                    e.currentTarget.style.color = isLost ? '#fca5a5' : '#fef08a';
                   }}
                 >
-                  <Compass size={11} color="#22d3ee" />
+                  <Compass size={11} color={isLost ? '#f43f5e' : '#eab308'} />
                   <span>VIEW LAST KNOWN LOCATION ON GLOBE</span>
                 </button>
               )}

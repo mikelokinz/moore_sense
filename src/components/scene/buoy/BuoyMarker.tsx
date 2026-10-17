@@ -18,15 +18,32 @@ interface BuoyMarkerProps {
   index?: number;
 }
 
+import { OFFLINE_STATION_REGISTRY } from '../../ui/OfflineBuoysModal';
+
 /**
- * Buoy state color mapping matching maritime telemetry standard:
- * - Green → SAFE
- * - Yellow/amber → WARNING
- * - Red → CRITICAL / ADRIFT
- * - Dim slate → OFFLINE
- * - Electric cyan → ACTIVE / IN-SERVICE
+ * Buoy state & disposition color mapping matching the Offline Buoys modal & telemetry standards:
+ * - OMNI-AD06 (LOST AT SEA) → Resonant Rose-Red (#f43f5e)
+ * - OMNI-AD07 / OMNI-BD09 (PURPOSEFULLY REMOVED) → Resonant Amber / Golden Yellow (#eab308)
+ * - Active OMNI Fleet Telemetry → High-Tech Electric Cyan (#00f0ff)
+ * - Standard Maritime Telemetry:
+ *   - Green → SAFE (#10b981)
+ *   - Yellow/Amber → WARNING (#f59e0b)
+ *   - Red → CRITICAL / ADRIFT (#ef4444)
+ *   - Amber → OFFLINE (#eab308)
  */
-export function getBuoyColor(status?: BuoyStatus | string): string {
+export function getBuoyColor(status?: BuoyStatus | string, buoyId?: string): string {
+  // 1. Precise station disposition check matching the Offline Buoys registry
+  if (buoyId && OFFLINE_STATION_REGISTRY[buoyId]) {
+    const offlineStation = OFFLINE_STATION_REGISTRY[buoyId];
+    if (offlineStation.disposition === 'LOST') {
+      return '#f43f5e'; // Resonant Rose-Red (LOST AT SEA - OMNI-AD06)
+    }
+    if (offlineStation.disposition === 'PURPOSEFULLY_REMOVED') {
+      return '#eab308'; // Resonant Amber / Golden Yellow (PURPOSEFULLY REMOVED - OMNI-AD07, OMNI-BD09)
+    }
+  }
+
+  // 2. Status / Freshness-based color mapping
   switch (status) {
     case 'SAFE':
       return '#10b981'; // Luminous emerald
@@ -34,9 +51,9 @@ export function getBuoyColor(status?: BuoyStatus | string): string {
       return '#f59e0b'; // Amber
     case 'CRITICAL':
     case 'ADRIFT':
-      return '#facc15'; // High-visibility marine yellow
+      return '#f43f5e'; // High-visibility marine emergency red
     case 'OFFLINE':
-      return '#64748b'; // Dim slate
+      return '#eab308'; // Purposefully removed / offline amber
     default:
       // Active in-situ OMNI stations default to high-tech telemetry cyan
       return '#00f0ff';
@@ -159,7 +176,7 @@ export function BuoyMarker({
   // Distinct phase offset so nearby buoys pulse out of phase
   const phaseOffset = useMemo(() => index * 1.57, [index]);
 
-  const color = useMemo(() => getBuoyColor(buoy.status), [buoy.status]);
+  const color = useMemo(() => getBuoyColor(buoy.status, buoy.id), [buoy.status, buoy.id]);
 
   // Short clean station code (e.g. "BD08", "BD09", "AD06")
   const shortId = useMemo(() => {
@@ -210,9 +227,11 @@ export function BuoyMarker({
       modelGroupRef.current.scale.setScalar(totalScale);
     }
 
-    // 5. Pulsing Navigational Strobe Beacon (Slow, rhythmic marine beacon flash)
+    // 5. Pulsing Navigational Strobe Beacon (Rhythmic marine flash; faster distress cadence for lost buoy)
     if (beaconMeshRef.current) {
-      const strobe = Math.sin(state.clock.elapsedTime * 4.0 + phaseOffset) > 0.4 ? 1.3 : 0.85;
+      const isLost = buoy.id === 'OMNI-AD06';
+      const flashSpeed = isLost ? 6.5 : 4.0;
+      const strobe = Math.sin(state.clock.elapsedTime * flashSpeed + phaseOffset) > 0.4 ? 1.35 : 0.85;
       beaconMeshRef.current.scale.setScalar(strobe);
     }
 
@@ -225,10 +244,10 @@ export function BuoyMarker({
       const scale1 = 0.7 + Math.pow(p1, 0.85) * 2.2;
       innerRingRef.current.scale.setScalar(scale1);
 
-      // Opacity: smooth sine envelope (0 at p=0, peaks at p=0.45, 0 at p=1.0)
+      // Opacity: smooth sine envelope with luminous resonant peak
       const mat1 = innerRingRef.current.material as THREE.MeshBasicMaterial;
       if (mat1) {
-        mat1.opacity = Math.sin(p1 * Math.PI) * 0.48;
+        mat1.opacity = Math.sin(p1 * Math.PI) * 0.60;
       }
     }
 
@@ -239,7 +258,7 @@ export function BuoyMarker({
 
       const mat2 = outerRingRef.current.material as THREE.MeshBasicMaterial;
       if (mat2) {
-        mat2.opacity = Math.sin(p2 * Math.PI) * 0.38;
+        mat2.opacity = Math.sin(p2 * Math.PI) * 0.46;
       }
     }
   });
@@ -323,13 +342,13 @@ export function BuoyMarker({
         rotation={[Math.PI / 2, 0, 0]}
         scale={[1.0, 1.0, 1.0]}
       >
-        {/* 4a. Waterline Ocean Contact Ripple Glow (Luminous Yellow Accent) */}
+        {/* 4a. Waterline Ocean Contact Ripple Glow (Luminous Accent matching telemetry/disposition color) */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0006, 0]}>
           <ringGeometry args={[0.013, 0.018, 24]} />
           <meshBasicMaterial
-            color="#facc15"
+            color={color}
             transparent
-            opacity={0.35}
+            opacity={0.42}
             side={THREE.DoubleSide}
             depthWrite={false}
             blending={THREE.AdditiveBlending}
@@ -396,13 +415,13 @@ export function BuoyMarker({
           />
         </mesh>
 
-        {/* 4k. VERTICAL HOLOGRAPHIC UPLINK BEACON BEAM (Visible from Orbit!) */}
+        {/* 4k. VERTICAL HOLOGRAPHIC UPLINK BEACON BEAM (The resonant telemetry stick visible from orbit!) */}
         <mesh position={[0, 0.075, 0]}>
           <cylinderGeometry args={[0.0014, 0.0032, 0.082, 10]} />
           <meshBasicMaterial
             color={color}
             transparent
-            opacity={0.82}
+            opacity={0.88}
             depthWrite={false}
             blending={THREE.AdditiveBlending}
           />
@@ -418,7 +437,7 @@ export function BuoyMarker({
           <meshBasicMaterial
             color={color}
             transparent
-            opacity={0.5}
+            opacity={0.65}
             depthWrite={false}
             blending={THREE.AdditiveBlending}
           />
@@ -431,7 +450,7 @@ export function BuoyMarker({
           <mesh>
             <ringGeometry args={[0.022, 0.025, 32]} />
             <meshBasicMaterial
-              color="#00f0ff"
+              color={color}
               transparent
               opacity={0.95}
               side={THREE.DoubleSide}
@@ -441,7 +460,7 @@ export function BuoyMarker({
           <mesh>
             <ringGeometry args={[0.036, 0.0385, 32]} />
             <meshBasicMaterial
-              color="#00f0ff"
+              color={color}
               transparent
               opacity={0.6}
               side={THREE.DoubleSide}
@@ -451,7 +470,7 @@ export function BuoyMarker({
           <mesh>
             <ringGeometry args={[0.050, 0.052, 32]} />
             <meshBasicMaterial
-              color="#00f0ff"
+              color={color}
               transparent
               opacity={0.3}
               side={THREE.DoubleSide}
@@ -481,14 +500,14 @@ export function BuoyMarker({
               padding: isSelected ? '2px 7px' : '2px 5px',
               borderRadius: '4px',
               background: isSelected
-                ? 'rgba(0, 240, 255, 0.95)'
+                ? `${color}e6`
                 : 'rgba(6, 12, 24, 0.88)',
               border: isSelected
-                ? '1px solid #00f0ff'
+                ? `1px solid ${color}`
                 : `1px solid ${color}80`,
               boxShadow: isSelected
-                ? '0 0 12px rgba(0, 240, 255, 0.7), 0 2px 6px rgba(0,0,0,0.8)'
-                : `0 0 8px ${color}30, 0 2px 4px rgba(0,0,0,0.7)`,
+                ? `0 0 14px ${color}, 0 2px 6px rgba(0,0,0,0.8)`
+                : `0 0 8px ${color}35, 0 2px 4px rgba(0,0,0,0.7)`,
               backdropFilter: 'blur(6px)',
               WebkitBackdropFilter: 'blur(6px)',
               whiteSpace: 'nowrap',
@@ -501,7 +520,7 @@ export function BuoyMarker({
                 height: '4px',
                 borderRadius: '50%',
                 backgroundColor: isSelected ? '#04101e' : color,
-                boxShadow: `0 0 4px ${isSelected ? '#00f0ff' : color}`,
+                boxShadow: `0 0 5px ${isSelected ? '#ffffff' : color}`,
                 display: 'inline-block',
                 flexShrink: 0,
               }}
