@@ -4,6 +4,7 @@ import type {
   MooringSegmentData,
 } from '../../components/watchcircle/watchCircleTypes';
 import type { BuoyDetail } from './buoyTypes';
+import { KNOWN_STATIONS } from '../../utils/eezJurisdiction';
 
 export interface MooringDTResponse {
   buoy_id: string;
@@ -130,12 +131,16 @@ export async function fetchLiveWatchCircleData(
   const rawRadius = waterDepth * Math.sqrt(Math.max(0.01, scope * scope - 1));
   const watchCircleRadius = Math.round(Math.min(950, Math.max(280, rawRadius * 0.45)));
 
+  const known = KNOWN_STATIONS[buoyId];
+  const stationLat = detail?.latitude ?? known?.latitude ?? 16.3617;
+  const stationLon = detail?.longitude ?? known?.longitude ?? 87.9903;
+
   const config: MooringConfig = {
     buoyId,
     waterDepth,
     watchCircleRadius,
-    nominalLatitude: detail?.latitude ?? 16.3617,
-    nominalLongitude: detail?.longitude ?? 87.9903,
+    nominalLatitude: stationLat,
+    nominalLongitude: stationLon,
     scope,
     mbl_kN: 245.0,
   };
@@ -192,8 +197,8 @@ export async function fetchLiveWatchCircleData(
   return {
     buoyId,
     name: detail?.name || buoyId,
-    latitude: detail?.latitude || 16.3617,
-    longitude: detail?.longitude || 87.9903,
+    latitude: stationLat,
+    longitude: stationLon,
     source: detail?.source || 'INCOIS / NIOT',
     observationTimestamp: detail?.observationTimestamp || dtResponse?.observation_timestamp || null,
     freshnessState: detail?.freshness?.state || 'LIVE',

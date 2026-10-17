@@ -14,6 +14,7 @@ import {
   fetchLiveWatchCircleData,
   type LiveWatchCirclePackage,
 } from '../services/buoy/mooringService';
+import { KNOWN_STATIONS } from '../utils/eezJurisdiction';
 
 interface WatchCircleLabProps {
   onExit?: () => void;
@@ -36,12 +37,13 @@ export default function WatchCircleLab({ onExit, initialBuoyId = 'OMNI-BD10' }: 
   });
 
   // Mooring Configuration (depth, scope, radius)
+  const initialKnown = KNOWN_STATIONS[initialBuoyId];
   const [config, setConfig] = useState<MooringConfig>({
     buoyId: initialBuoyId,
     waterDepth: 2627,
     watchCircleRadius: 360,
-    nominalLatitude: 16.3617,
-    nominalLongitude: 87.9903,
+    nominalLatitude: initialKnown?.latitude ?? 16.3617,
+    nominalLongitude: initialKnown?.longitude ?? 87.9903,
     scope: 1.22,
     mbl_kN: 245.0,
   });
