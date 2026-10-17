@@ -179,6 +179,7 @@ backend/test.joblib
 *.ntvs*
 *.njsproj
 *.sln
+~$*.xlsx
 
 # ------------------------------------------------------------------------------
 # 11. Operating System Files
